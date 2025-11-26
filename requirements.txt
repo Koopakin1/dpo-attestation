@@ -1,0 +1,10 @@
+aiogram==3.4.1
+asyncpg
+SQLAlchemy
+pydantic
+pydantic-settings
+httpx
+anthropic
+reportlab
+python-dotenv
+aiosqlite
