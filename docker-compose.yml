@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: dpo_attestation_db
+    environment:
+      POSTGRES_DB: dpo_attestation
+      POSTGRES_USER: dpo_user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dpo_user -d dpo_attestation"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+ partner_bot:
+    build: .
+    container_name: dpo_partner_bot
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PARTNER_BOT_TOKEN=${PARTNER_BOT_TOKEN}
+      - EXAM_BOT_TOKEN=${EXAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://dpo_user:password@db:5432/dpo_attestation
+      - FSM_DB_PATH=/app/fsm_storage.db
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LOG_LEVEL=INFO
+      - DEBUG=${DEBUG:-false}
+    volumes:
+      - ./diplomas:/app/diplomas
+      - ./logs:/app/logs
+      - fsm_storage:/app/fsm_storage.db
+    ports:
+      - "8081:8080"
+    command: ["python", "-m", "src.partner_bot"]
+    restart: unless-stopped
+
+  exam_bot:
+    build: .
+    container_name: dpo_exam_bot
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PARTNER_BOT_TOKEN=${PARTNER_BOT_TOKEN}
+      - EXAM_BOT_TOKEN=${EXAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://dpo_user:password@db:5432/dpo_attestation
+      - FSM_DB_PATH=/app/fsm_storage.db
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LOG_LEVEL=INFO
+      - DEBUG=${DEBUG:-false}
+    volumes:
+      - ./diplomas:/app/diplomas
+      - ./logs:/app/logs
+      - fsm_storage:/app/fsm_storage.db
+    ports:
+      - "8082:8080"
+    command: ["python", "-m", "src.exam_bot"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  fsm_storage:
