@@ -34,4 +34,3 @@ Both bots use SQLite for FSM state storage and PostgreSQL for persistent data.
 - SQLAlchemy
 - ReportLab
 - Anthropic API
-
